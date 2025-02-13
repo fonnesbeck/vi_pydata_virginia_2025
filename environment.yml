@@ -1,0 +1,29 @@
+name: pymc_vi_course
+
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - altair
+  - ipython
+  - ipywidgets
+  - jupyter_client
+  - jupyter_core
+  - jupyterlab
+  - numba
+  - nutpie
+  - pandas
+  - patsy
+  - pip
+  - polars
+  - preliz
+  - pyarrow
+  - pymc
+  - pymc-extras
+  - pydot
+  - python-graphviz
+  - scipy
+  - seaborn
+  - setuptools
+  - watermark
+  - xlrd
