@@ -1,2 +1,51 @@
-# vi_pydata_virginia_2025
-A Beginner's Guide to Variational Inference
+# A Beginner's Guide to Variational Inference
+
+## Description
+
+This tutorial is **for data scientists, statisticians, and machine learning practitioners who are comfortable with Python and basics of probability**.
+
+We’ll break down the mechanics of VI and its application in PyMC in an approachable way, starting with intuitive explanations and building up to practical examples.
+
+Participants will learn how to apply ADVI and Pathfinder in PyMC and evaluate their results against MCMC, gaining insights into when and why to choose VI.
+
+### Takeaways
+
+Participants will leave understanding:
+
+- The fundamentals of VI and how it differs from MCMC.
+- How to implement ADVI and Pathfinder in PyMC.
+- Practical considerations when selecting and evaluating inference methods.
+
+### Background Knowledge Required
+
+- Basic understanding of probability and Bayesian inference.
+- Familiarity with Python. Prior PyMC experience is helpful but not required.
+
+### Materials Distribution
+
+All materials, including notebooks and datasets, will be available on GitHub.
+
+## Outline
+
+1. **Introduction: Why Variational Inference?** (10 min)
+- The limitations of MCMC for large datasets.
+- Overview of VI: How it works and why it’s faster.
+
+2. **Variational Inference Basics** (20 min)
+- Key concepts: Evidence Lower Bound (ELBO), optimization, and approximation families.
+- Intuitive explanation of ADVI and Pathfinder.
+
+3. **Implementing VI with PyMC** (15 min)
+- Step-by-step walkthrough of VI with a linear model.
+- Comparing ADVI, Pathfinder, and MCMC.
+
+4. **Evaluating VI Approximations** (10 min)
+- How to measure the quality of VI approximations (ELBO, simulation-based calibration, etc.).
+- Practical trade-offs between speed and accuracy.
+
+5. **Scaling Up: Complex Models and Real-World Applications** (25 min)
+- Applying VI to hierarchical and large-scale models.
+- Tips for debugging and optimizing VI workflows.
+
+6. **Open Discussion and Q&A** (10 min)
+- Address audience-specific use cases and questions.
