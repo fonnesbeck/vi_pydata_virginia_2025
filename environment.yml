@@ -7,6 +7,7 @@ dependencies:
   - altair
   - ipython
   - ipywidgets
+  - jupyter_bokeh
   - jupyter_client
   - jupyter_core
   - jupyterlab
@@ -15,6 +16,7 @@ dependencies:
   - pandas
   - patsy
   - pip
+  - plotly
   - polars
   - preliz
   - pyarrow

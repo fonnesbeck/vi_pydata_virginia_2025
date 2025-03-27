@@ -25,6 +25,35 @@ Participants will leave understanding:
 
 All materials, including notebooks and datasets, will be available on GitHub.
 
+### Setting up the Environment
+
+If using Anaconda/Miniforge:
+The repository contains an `environment.yml` file with all required packages. Run:
+
+    mamba env create
+
+if you are using Miniforge, or if you installed Anaconda, you can use:
+
+    conda env create
+
+from the main course directory (use `conda` instead of `mamba` if you installed Anaconda). Then activate the environment:
+
+    mamba activate bayes_course
+    # or
+    conda activate bayes_course
+
+If using Pixi:
+The repository contains a `pixi.toml` file. From the main course directory, simply run:
+
+    pixi install
+    pixi shell
+
+Then, you can start **JupyterLab** to access the materials:
+
+    jupyter lab
+
+For those who like to work in VS Code, you can also run Jupyter notebooks from within VS Code. To do this, you will need to install the [Jupyter extension](https://marketplace.visualstudio.com/items?itemName=ms-toolsai.jupyter). Once this is installed, you can open the notebooks in the `notebooks` subdirectory and run them interactively.
+
 ## Outline
 
 1. **Introduction: Why Variational Inference?** (10 min)
