@@ -75,31 +75,89 @@ def gaussian_logpdf(z, mu, sigma):
     return stats.norm.logpdf(z, mu, sigma)
 
 def calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=2000):
-    """Calculate ELBO using Monte Carlo sampling from q(z)."""
+    """Calculate ELBO (E_q[log p(z) - log q(z)]) using Monte Carlo sampling."""
     sigma = max(sigma, 1e-9)
     samples_q = np.random.normal(mu, sigma, n_samples)
+
     log_p_samples = target_logpdf(samples_q, **target_params)
     log_q_samples = gaussian_logpdf(samples_q, mu, sigma)
-    log_p_samples = np.nan_to_num(log_p_samples, nan=-np.inf, neginf=-np.inf)
-    log_q_samples = np.nan_to_num(log_q_samples, nan=-np.inf, neginf=-np.inf)
+
+    # Replace NaNs and ensure -inf propagation
+    log_p_samples = np.nan_to_num(log_p_samples, nan=-np.inf, posinf=np.inf, neginf=-np.inf)
+    log_q_samples = np.nan_to_num(log_q_samples, nan=-np.inf, posinf=np.inf, neginf=-np.inf)
+
     diff = log_p_samples - log_q_samples
+
+    # If p=0 where q>0 for any sample, ELBO should be -inf
+    # This corresponds to diff being -inf if log_q is finite
+    if np.any(diff == -np.inf):
+         finite_q = log_q_samples != np.inf
+         if np.any(diff[finite_q] == -np.inf):
+             return -np.inf
+
+    # Calculate mean over finite values, ignoring potential +inf or -inf diffs
+    # (though -inf case handled above, +inf shouldn't strictly happen sampling from q)
     finite_diff = diff[np.isfinite(diff)]
     if len(finite_diff) == 0:
-        return -np.inf
+        # Check if it was due to the infinite ELBO case handled above
+        if np.any((log_p_samples == -np.inf) & (log_q_samples > -np.inf)):
+            return -np.inf
+        return np.nan # Undefined if no finite samples or n_samples=0
+
     elbo = np.mean(finite_diff)
     return elbo
+
+# Add dedicated KL calculation
+def calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=2000):
+    """Calculate KL(q || p) = E_q[log q(z) - log p(z)] using Monte Carlo sampling."""
+    sigma = max(sigma, 1e-9)
+    samples_q = np.random.normal(mu, sigma, n_samples)
+
+    log_p_samples = target_logpdf(samples_q, **target_params)
+    log_q_samples = gaussian_logpdf(samples_q, mu, sigma)
+
+    # Replace NaNs and ensure -inf propagation
+    log_p_samples = np.nan_to_num(log_p_samples, nan=-np.inf, posinf=np.inf, neginf=-np.inf)
+    log_q_samples = np.nan_to_num(log_q_samples, nan=-np.inf, posinf=np.inf, neginf=-np.inf)
+
+    diff = log_q_samples - log_p_samples
+
+    # If p=0 where q>0 for any sample, KL divergence is +inf
+    # This corresponds to diff being +inf if log_q is finite
+    if np.any(diff == np.inf):
+         finite_q = log_q_samples != np.inf
+         if np.any(diff[finite_q] == np.inf):
+             return np.inf
+
+    # Calculate mean over finite values if KL is not infinite
+    finite_diff = diff[np.isfinite(diff)]
+    if len(finite_diff) == 0:
+        # Check if it was due to the infinite KL case handled above
+        if np.any((log_p_samples == -np.inf) & (log_q_samples > -np.inf)):
+            return np.inf
+        return np.nan # Undefined if no finite samples or n_samples=0
+
+    kl_div = np.mean(finite_diff)
+    return kl_div
 
 
 class VariationalInferenceViz:
     """
     An interactive visualization for 1D Variational Inference.
-    Uses pn.bind for dynamic updates.
+    Uses pn.bind for dynamic updates. The metric (ELBO or KL) is fixed on instantiation.
     """
-    def __init__(self, n_samples=2000):
+    def __init__(self, n_samples=2000, metric='KL(q||p)'):
         """
         Initializes the visualization components.
+
+        Args:
+            n_samples (int): Number of samples for Monte Carlo estimation.
+            metric (str): The metric to display ('ELBO' or 'KL(q||p)'). Defaults to 'KL(q||p)'.
         """
+        if metric not in ['ELBO', 'KL(q||p)']:
+            raise ValueError("Metric must be 'ELBO' or 'KL(q||p)'")
         self.n_samples = n_samples
+        self.metric = metric # Store the chosen metric
 
         self.mu_slider = pn.widgets.FloatSlider(
             name='Mean (μ)', start=-10.0, end=10.0, step=0.1, value=0.0
@@ -110,15 +168,11 @@ class VariationalInferenceViz:
         self.target_selector = pn.widgets.Select(
             name='Target Distribution', options=list(target_distributions.keys()), width=180, value='Student-t'
         )
-        self.metric_selector = pn.widgets.RadioButtonGroup(
-            name='Metric', options=['ELBO', 'KL(q||p)'], button_type='default', value='KL(q||p)'
-        )
 
         initial_fig = self._create_plotly_fig(
             self.mu_slider.value,
             self.sigma_slider.value,
-            self.target_selector.value,
-            self.metric_selector.value
+            self.target_selector.value
         )
         self.plot_pane = pn.pane.Plotly(initial_fig, width=700, height=400)
 
@@ -127,12 +181,11 @@ class VariationalInferenceViz:
                 self._update_plot,
                 mu=self.mu_slider,
                 sigma=self.sigma_slider,
-                target_name=self.target_selector,
-                metric=self.metric_selector
+                target_name=self.target_selector
             )
         )
 
-    def _create_plotly_fig(self, mu, sigma, target_name, metric):
+    def _create_plotly_fig(self, mu, sigma, target_name):
         """Generates the Plotly figure object based on current parameters."""
         target_info = target_distributions[target_name]
         target_pdf = target_info['pdf']
@@ -151,14 +204,12 @@ class VariationalInferenceViz:
         p_values = target_pdf(z, **target_params)
         q_values = gaussian_pdf(z, mu, sigma)
 
-        elbo = calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
-
-        if metric == 'KL(q||p)':
-            metric_value = -elbo
-            metric_label = "KL(q||p)"
-        else:
-            metric_value = elbo
-            metric_label = "ELBO"
+        # Calculate selected metric using self.metric
+        metric_label = self.metric # Use stored metric for label
+        if self.metric == 'KL(q||p)':
+            metric_value = calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
+        else: # ELBO
+            metric_value = calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
 
         fig = go.Figure()
 
@@ -171,6 +222,14 @@ class VariationalInferenceViz:
             line=dict(color='red', width=2, dash='dash')
         ))
 
+        # Format metric value, handling potential inf or nan
+        if np.isinf(metric_value):
+            metric_text = f"{metric_label} ≈ {metric_value:+.1f}" # Show +inf or -inf
+        elif np.isnan(metric_value):
+            metric_text = f"{metric_label} = NaN" # Indicate undefined
+        else:
+            metric_text = f"{metric_label} ≈ {metric_value:.4f}"
+
         fig.update_layout(
             title="Variational Inference: Target p(z) vs Approx q(z)",
             xaxis_title="z",
@@ -181,7 +240,7 @@ class VariationalInferenceViz:
             annotations=[
                 dict(
                     x=0.02, y=0.98, xref="paper", yref="paper",
-                    text=f"{metric_label} ≈ {metric_value:.4f}",
+                    text=metric_text, # Use formatted text
                     showarrow=False,
                     font=dict(size=16, color="black"), align="left",
                     bgcolor="#e8f0fe", bordercolor="#a9c7e8",
@@ -192,19 +251,19 @@ class VariationalInferenceViz:
         )
         return fig
 
-    def _update_plot(self, mu, sigma, target_name, metric):
+    def _update_plot(self, mu, sigma, target_name):
         """Creates the Plotly figure based on widget values."""
-        fig = self._create_plotly_fig(mu, sigma, target_name, metric)
+        fig = self._create_plotly_fig(mu, sigma, target_name)
         return fig
 
     @property
     def layout(self):
         """Returns the Panel layout object for the visualization."""
-        description_text = "Select a target distribution and metric. Adjust the parameters (μ, σ) of the approximating Gaussian distribution (red dashed line) to optimize the chosen metric (maximize ELBO or minimize KL)."
+        opt_goal = "minimize" if self.metric == 'KL(q||p)' else "maximize"
+        description_text = f"Select a target distribution and adjust the parameters (μ, σ) of the approximating Gaussian distribution (red dashed line) to {opt_goal} the {self.metric}."
 
         widget_row = pn.Row(
             self.target_selector,
-            self.metric_selector,
             pn.Column(self.mu_slider, self.sigma_slider)
         )
 
