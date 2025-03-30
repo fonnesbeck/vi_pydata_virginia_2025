@@ -29,3 +29,5 @@ dependencies:
   - setuptools
   - watermark
   - xlrd
+  - pip:
+    - kaleido
