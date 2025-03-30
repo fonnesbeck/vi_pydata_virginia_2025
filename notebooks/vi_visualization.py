@@ -3,6 +3,8 @@ import scipy.stats as stats
 import scipy.special
 import panel as pn
 import plotly.graph_objects as go
+from ipywidgets import interact, FloatSlider, Dropdown
+import plotly.io as pio
 
 pn.extension('plotly')
 
@@ -26,27 +28,19 @@ target_distributions['Mixture Gaussian'] = {
     'z_range': (-10, 10)
 }
 
-def gamma_pdf_wrapper(z, a=2.0, scale=2.0):
-    """Wrapper for scipy.stats.gamma PDF, handling z <= 0."""
-    pdf_vals = np.zeros_like(z, dtype=float)
-    mask = z > 0
-    if np.any(mask):
-        pdf_vals[mask] = stats.gamma.pdf(z[mask], a=a, scale=scale)
-    return pdf_vals
+def gumbel_pdf(z, loc=0, scale=1):
+    """PDF of the Gumbel distribution."""
+    return stats.gumbel_r.pdf(z, loc=loc, scale=scale)
 
-def gamma_logpdf_wrapper(z, a=2.0, scale=2.0):
-    """Wrapper for scipy.stats.gamma log-PDF, handling z <= 0."""
-    logpdf_vals = np.full_like(z, -np.inf, dtype=float)
-    mask = z > 0
-    if np.any(mask):
-        logpdf_vals[mask] = stats.gamma.logpdf(z[mask], a=a, scale=scale)
-    return logpdf_vals
+def gumbel_logpdf(z, loc=0, scale=1):
+    """Log-PDF of the Gumbel distribution."""
+    return stats.gumbel_r.logpdf(z, loc=loc, scale=scale)
 
-target_distributions['Gamma'] = {
-    'pdf': gamma_pdf_wrapper,
-    'logpdf': gamma_logpdf_wrapper,
-    'params': {'a': 2.0, 'scale': 2.0},
-    'z_range': (-1, 15)
+target_distributions['Gumbel'] = {
+    'pdf': gumbel_pdf,
+    'logpdf': gumbel_logpdf,
+    'params': {'loc': 2.0, 'scale': 2.0},
+    'z_range': (-5, 15)
 }
 
 def student_t_pdf(z, df=3, loc=0, scale=1):
@@ -99,15 +93,13 @@ def calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=2000):
     # (though -inf case handled above, +inf shouldn't strictly happen sampling from q)
     finite_diff = diff[np.isfinite(diff)]
     if len(finite_diff) == 0:
-        # Check if it was due to the infinite ELBO case handled above
         if np.any((log_p_samples == -np.inf) & (log_q_samples > -np.inf)):
             return -np.inf
-        return np.nan # Undefined if no finite samples or n_samples=0
+        return np.nan 
 
     elbo = np.mean(finite_diff)
     return elbo
 
-# Add dedicated KL calculation
 def calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=2000):
     """Calculate KL(q || p) = E_q[log q(z) - log p(z)] using Monte Carlo sampling."""
     sigma = max(sigma, 1e-9)
@@ -129,13 +121,12 @@ def calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=2
          if np.any(diff[finite_q] == np.inf):
              return np.inf
 
-    # Calculate mean over finite values if KL is not infinite
     finite_diff = diff[np.isfinite(diff)]
     if len(finite_diff) == 0:
         # Check if it was due to the infinite KL case handled above
         if np.any((log_p_samples == -np.inf) & (log_q_samples > -np.inf)):
             return np.inf
-        return np.nan # Undefined if no finite samples or n_samples=0
+        return np.nan 
 
     kl_div = np.mean(finite_diff)
     return kl_div
@@ -146,18 +137,18 @@ class VariationalInferenceViz:
     An interactive visualization for 1D Variational Inference.
     Uses pn.bind for dynamic updates. The metric (ELBO or KL) is fixed on instantiation.
     """
-    def __init__(self, n_samples=2000, metric='KL(q||p)'):
+    def __init__(self, n_samples=2000, metric='KL'):
         """
         Initializes the visualization components.
 
         Args:
             n_samples (int): Number of samples for Monte Carlo estimation.
-            metric (str): The metric to display ('ELBO' or 'KL(q||p)'). Defaults to 'KL(q||p)'.
+            metric (str): The metric to display ('ELBO' or 'KL'). Defaults to 'KL'.
         """
-        if metric not in ['ELBO', 'KL(q||p)']:
-            raise ValueError("Metric must be 'ELBO' or 'KL(q||p)'")
+        if metric not in ['ELBO', 'KL']:
+            raise ValueError("Metric must be 'ELBO' or 'KL'")
         self.n_samples = n_samples
-        self.metric = metric # Store the chosen metric
+        self.metric = metric 
 
         self.mu_slider = pn.widgets.FloatSlider(
             name='Mean (μ)', start=-10.0, end=10.0, step=0.1, value=0.0
@@ -204,11 +195,10 @@ class VariationalInferenceViz:
         p_values = target_pdf(z, **target_params)
         q_values = gaussian_pdf(z, mu, sigma)
 
-        # Calculate selected metric using self.metric
-        metric_label = self.metric # Use stored metric for label
-        if self.metric == 'KL(q||p)':
+        metric_label = self.metric 
+        if self.metric == 'KL':
             metric_value = calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
-        else: # ELBO
+        else: 
             metric_value = calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
 
         fig = go.Figure()
@@ -222,11 +212,10 @@ class VariationalInferenceViz:
             line=dict(color='red', width=2, dash='dash')
         ))
 
-        # Format metric value, handling potential inf or nan
         if np.isinf(metric_value):
-            metric_text = f"{metric_label} ≈ {metric_value:+.1f}" # Show +inf or -inf
+            metric_text = f"{metric_label} ≈ {metric_value:+.1f}" 
         elif np.isnan(metric_value):
-            metric_text = f"{metric_label} = NaN" # Indicate undefined
+            metric_text = f"{metric_label} = NaN" 
         else:
             metric_text = f"{metric_label} ≈ {metric_value:.4f}"
 
@@ -240,7 +229,7 @@ class VariationalInferenceViz:
             annotations=[
                 dict(
                     x=0.02, y=0.98, xref="paper", yref="paper",
-                    text=metric_text, # Use formatted text
+                    text=metric_text, 
                     showarrow=False,
                     font=dict(size=16, color="black"), align="left",
                     bgcolor="#e8f0fe", bordercolor="#a9c7e8",
@@ -259,7 +248,7 @@ class VariationalInferenceViz:
     @property
     def layout(self):
         """Returns the Panel layout object for the visualization."""
-        opt_goal = "minimize" if self.metric == 'KL(q||p)' else "maximize"
+        opt_goal = "minimize" if self.metric == 'KL' else "maximize"
         description_text = f"Select a target distribution and adjust the parameters (μ, σ) of the approximating Gaussian distribution (red dashed line) to {opt_goal} the {self.metric}."
 
         widget_row = pn.Row(
@@ -278,3 +267,142 @@ class VariationalInferenceViz:
             self.plot_pane,
             name="VI Visualization"
         )
+
+class JupyterVariationalInferenceViz:
+    """
+    A Jupyter notebook-compatible interactive visualization for 1D Variational Inference.
+    Uses ipywidgets for better compatibility with Jupyter environments.
+    """
+    def __init__(self, n_samples=2000, metric='KL'):
+        """
+        Initializes the Jupyter-compatible visualization components.
+
+        Args:
+            n_samples (int): Number of samples for Monte Carlo estimation.
+            metric (str): The metric to display ('ELBO' or 'KL'). Defaults to 'KL'.
+        """
+        if metric not in ['ELBO', 'KL']:
+            raise ValueError("Metric must be 'ELBO' or 'KL'")
+        self.n_samples = n_samples
+        self.metric = metric
+        
+        self.fig = self._create_plotly_fig(
+            mu=0.0,
+            sigma=1.0,
+            target_name='Student-t'
+        )
+        
+        self.target_dropdown = Dropdown(
+            options=list(target_distributions.keys()),
+            value='Student-t',
+            description='Target:',
+            style={'description_width': 'initial'}
+        )
+        
+        self.mu_slider = FloatSlider(
+            value=0.0,
+            min=-10.0,
+            max=10.0,
+            step=0.1,
+            description='Mean (μ):',
+            style={'description_width': 'initial'},
+            continuous_update=False
+        )
+        
+        self.sigma_slider = FloatSlider(
+            value=1.0,
+            min=0.1,
+            max=10.0,
+            step=0.1,
+            description='Std Dev (σ):',
+            style={'description_width': 'initial'},
+            continuous_update=False
+        )
+        
+    def _create_plotly_fig(self, mu, sigma, target_name):
+        """Generates the Plotly figure object based on current parameters."""
+        target_info = target_distributions[target_name]
+        target_pdf = target_info['pdf']
+        target_logpdf = target_info['logpdf']
+        target_params = target_info['params']
+        z_min_hint, z_max_hint = target_info['z_range']
+
+        sigma = max(sigma, 1e-9)
+
+        plot_z_min = min(z_min_hint, mu - 4 * sigma)
+        plot_z_max = max(z_max_hint, mu + 4 * sigma)
+        if plot_z_max <= plot_z_min:
+            plot_z_max = plot_z_min + 1.0
+        z = np.linspace(plot_z_min, plot_z_max, 500)
+
+        p_values = target_pdf(z, **target_params)
+        q_values = stats.norm.pdf(z, mu, sigma)
+
+        if self.metric == 'KL':
+            metric_value = calculate_kl_divergence(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
+        else:
+            metric_value = calculate_elbo(target_logpdf, target_params, mu, sigma, n_samples=self.n_samples)
+
+        fig = go.Figure()
+
+        fig.add_trace(go.Scatter(
+            x=z, y=p_values, mode='lines', name=f'Target: {target_name}',
+            line=dict(color='blue', width=2)
+        ))
+        fig.add_trace(go.Scatter(
+            x=z, y=q_values, mode='lines', name=f'Approx q(z): N({mu:.2f}, {sigma:.2f}²)',
+            line=dict(color='red', width=2, dash='dash')
+        ))
+
+        if np.isinf(metric_value):
+            metric_text = f"{self.metric} ≈ {metric_value:+.1f}" # Show +inf or -inf
+        elif np.isnan(metric_value):
+            metric_text = f"{self.metric} = NaN" # Indicate undefined
+        else:
+            metric_text = f"{self.metric} ≈ {metric_value:.4f}"
+
+        fig.update_layout(
+            title="Variational Inference: Target p(z) vs Approx q(z)",
+            xaxis_title="z",
+            yaxis_title="Density",
+            legend=dict(yanchor="top", y=0.99, xanchor="right", x=0.99),
+            margin=dict(l=20, r=20, t=50, b=20),
+            width=700, height=400,
+            annotations=[
+                dict(
+                    x=0.02, y=0.98, xref="paper", yref="paper",
+                    text=metric_text,
+                    showarrow=False,
+                    font=dict(size=16, color="black"), align="left",
+                    bgcolor="#e8f0fe", bordercolor="#a9c7e8",
+                    borderwidth=1, borderpad=8,
+                    xanchor="left", yanchor="top"
+                )
+            ]
+        )
+        return fig
+        
+    def _update_plot(self, mu, sigma, target_name):
+        """Creates an updated Plotly figure based on widget values."""
+        return self._create_plotly_fig(mu, sigma, target_name)
+    
+    def show(self):
+        """Display the interactive visualization."""
+        pio.renderers.default = "notebook"
+        
+        opt_goal = "minimize" if self.metric == 'KL' else "maximize"
+        description = f"<h3>Interactive Variational Inference Demo</h3>"
+        description += f"<p>Select a target distribution and adjust the parameters (μ, σ) of the approximating Gaussian distribution (red dashed line) to {opt_goal} the {self.metric}.</p>"
+        from IPython.display import HTML, display
+        display(HTML(description))
+        
+        def update(target=self.target_dropdown.value, 
+                  mu=self.mu_slider.value, 
+                  sigma=self.sigma_slider.value):
+            self.fig = self._update_plot(mu, sigma, target)
+            return self.fig
+        
+        return interact(update, 
+                       target=self.target_dropdown, 
+                       mu=self.mu_slider, 
+                       sigma=self.sigma_slider)
