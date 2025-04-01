@@ -1,9 +1,9 @@
 [project]
-authors = ["Chris Fonnesbeck <fonnesbeck@gmail.com>"]
+authors = ["Chris Fonnesbeck <fonnesbeck@gmail.com>", "Alexandre Andorra <andorra.alexandre@gmail.com>"]
 channels = ["conda-forge"]
 description = "A Beginner's Guide to Variational Inference"
 name = "pymc_vi_course"
-platforms = ["linux-64"]
+platforms = ["linux-64", "osx-arm64"]
 version = "0.1.0"
 
 [tasks]
