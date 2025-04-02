@@ -512,8 +512,24 @@ class SVGDAnimatedDemo:
         return fig
 
 
-def create_svgd_demo(target="banana", n_particles=200, n_frames=100):
-    """Create and return an animated SVGD demo."""
+def create_svgd_demo(target: str = "banana", n_particles: int = 200, n_frames: int = 100) -> plotly.graph_objects.Figure:
+    """Create and return an animated SVGD demo.
+    
+    Parameters
+    ----------
+    target : str, default="banana"
+        Name of the target distribution to use. Options include 
+        "banana", "donut", "standard", "multimodal", and "squiggle".
+    n_particles : int, default=200
+        Number of particles to use in the simulation.
+    n_frames : int, default=100
+        Number of animation frames to generate.
+        
+    Returns
+    -------
+    plotly.graph_objects.Figure
+        A plotly Figure object containing the animated SVGD demonstration.
+    """
     demo = SVGDAnimatedDemo(target_name=target, n_particles=n_particles, n_frames=n_frames)
     return demo.create_animation()
 
