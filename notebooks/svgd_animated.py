@@ -1,4 +1,5 @@
 import numpy as np
+import plotly
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
@@ -7,8 +8,6 @@ pio.renderers.default = "notebook"
 
 
 class MultivariateNormal:
-    """Python implementation of the MultivariateNormal class from
-    Chi Feng's MCMC Demo (https://github.com/chi-feng/gp-demo)"""
 
     def __init__(self, mean, cov):
         self.mean = mean
@@ -133,7 +132,8 @@ class TargetDistributions:
 
 
 class SVGDAnimatedDemo:
-    """SVGD simulation class with animation capabilities."""
+    """SVGD simulation class with animation capabilities. Derived from
+    Chi Feng's MCMC Demo (https://github.com/chi-feng/gp-demo)"""
 
     def __init__(self, target_name="banana", n_particles=200, n_frames=100):
         """Initialize SVGD simulation with chosen target distribution."""
@@ -162,8 +162,6 @@ class SVGDAnimatedDemo:
         self.ymin, self.ymax = -6, 6
 
         self.frames_data = []
-
-        self.run_simulation()
 
     def reset(self):
         """Reset the simulation state."""
@@ -271,6 +269,8 @@ class SVGDAnimatedDemo:
 
     def create_animation(self):
         """Create an animated plot of the SVGD simulation."""
+
+        self.run_simulation()
 
         X, Y, Z = self.compute_density_grid()
 
