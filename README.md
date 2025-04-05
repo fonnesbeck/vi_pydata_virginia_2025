@@ -38,9 +38,9 @@ if you are using Miniforge, or if you installed Anaconda, you can use:
 
 from the main course directory (use `conda` instead of `mamba` if you installed Anaconda). Then activate the environment:
 
-    mamba activate bayes_course
+    mamba activate pymc_vi_course
     # or
-    conda activate bayes_course
+    conda activate pymc_vi_course
 
 If using Pixi:
 The repository contains a `pixi.toml` file. From the main course directory, simply run:
