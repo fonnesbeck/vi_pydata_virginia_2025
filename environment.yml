@@ -5,6 +5,7 @@ channels:
 dependencies:
   - python
   - altair
+  - blackjax
   - ipython
   - ipywidgets
   - jupyter_bokeh
@@ -31,3 +32,4 @@ dependencies:
   - xlrd
   - pip:
     - kaleido
+    - git+https://github.com/pymc-devs/pymc-extras.git
