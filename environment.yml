@@ -7,6 +7,7 @@ dependencies:
   - altair
   - blackjax
   - ipython
+  - hvplot
   - ipywidgets
   - jupyter_bokeh
   - jupyter_client
@@ -22,7 +23,6 @@ dependencies:
   - preliz
   - pyarrow
   - pymc
-  - pymc-extras
   - pydot
   - python-graphviz
   - scipy
@@ -31,5 +31,6 @@ dependencies:
   - watermark
   - xlrd
   - pip:
+    - jax
     - kaleido
     - git+https://github.com/pymc-devs/pymc-extras.git
