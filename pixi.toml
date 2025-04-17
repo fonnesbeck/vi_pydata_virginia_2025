@@ -1,5 +1,8 @@
 [project]
-authors = ["Chris Fonnesbeck <fonnesbeck@gmail.com>", "Alexandre Andorra <andorra.alexandre@gmail.com>"]
+authors = [
+    "Chris Fonnesbeck <fonnesbeck@gmail.com>",
+    "Alexandre Andorra <andorra.alexandre@gmail.com>",
+]
 channels = ["conda-forge"]
 description = "A Beginner's Guide to Variational Inference"
 name = "pymc_vi_course"
@@ -39,7 +42,7 @@ blackjax = ">=1.2.4,<2"
 python-kaleido = "*"
 jax = ">=0.5.2,<0.6"
 numpyro = ">=0.18.0,<0.19"
-pymc-extras = ">=0.2.4,<0.3"
 
 [pypi-dependencies]
 numpy = ">=1.26.4,<2"
+pymc-extras = { git = "https://github.com/pymc-devs/pymc-extras.git" }
